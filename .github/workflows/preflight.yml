@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - run: docker run --rm --platform linux/386 -v "$PWD":/src -w /src i386/ubuntu:focal sh -c 'echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80retries && apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -yqq build-essential >/dev/null && make -j4'
+      - run: docker run --rm --platform linux/386 -v "$PWD":/src -w /src i386/ubuntu:focal sh -c 'apt-get -o Acquire::Retries=5 update -qq && DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -yqq build-essential >/dev/null && make -j4'
 
   windows:
     strategy:
