@@ -1,0 +1,86 @@
+name: preflight
+on:
+  push:
+    branches: [picante8-preflight]
+  workflow_dispatch:
+
+jobs:
+  linux:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-22.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: make -j4
+      - run: sh tools/check.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: retro8-${{ matrix.runner }}
+          path: retro8_libretro.so
+
+  linux-i686:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker run --rm --platform linux/386 -v "$PWD":/src -w /src i386/ubuntu:focal sh -c 'apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -yqq build-essential >/dev/null && make -j4'
+
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, i686]
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -yqq g++-mingw-w64-x86-64-posix g++-mingw-w64-i686-posix gcc-mingw-w64-x86-64-posix gcc-mingw-w64-i686-posix >/dev/null
+      - run: make -j4 platform=win CC=${{ matrix.arch }}-w64-mingw32-gcc-posix CXX=${{ matrix.arch }}-w64-mingw32-g++-posix
+      - uses: actions/upload-artifact@v4
+        with:
+          name: retro8-windows-${{ matrix.arch }}
+          path: retro8_libretro.dll
+
+  android:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: $ANDROID_NDK_LATEST_HOME/ndk-build -j4 -C jni APP_ABI="armeabi-v7a arm64-v8a x86 x86_64"
+
+  apple:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: macos-15, platform: osx, arch: arm64 }
+          - { runner: macos-15-intel, platform: osx, arch: x86_64 }
+          - { runner: macos-15, platform: ios-arm64, arch: arm64 }
+          - { runner: macos-15, platform: tvos-arm64, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: make -j4 platform=${{ matrix.platform }} CROSS_COMPILE=1 arch=${{ matrix.arch }}
+
+  emscripten:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker run --rm -v "$PWD":/src -w /src emscripten/emsdk:3.1.74 emmake make -j4 platform=emscripten
+
+  consoles:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { image: devkitpro/devkita64, platform: libnx }
+          - { image: devkitpro/devkitppc, platform: ngc }
+          - { image: devkitpro/devkitppc, platform: wii }
+          - { image: devkitpro/devkitppc, platform: wiiu }
+          - { image: devkitpro/devkitarm, platform: ctr }
+          - { image: vitasdk/vitasdk, platform: vita }
+          - { image: pspdev/pspdev, platform: psp1 }
+          - { image: ps2dev/ps2dev, platform: ps2 }
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker run --rm -v "$PWD":/src -w /src ${{ matrix.image }} sh -c 'command -v make >/dev/null || (apk add --no-cache make >/dev/null 2>&1 || true); make -j4 platform=${{ matrix.platform }}'
