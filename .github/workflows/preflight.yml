@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - run: docker run --rm --platform linux/386 -v "$PWD":/src -w /src i386/ubuntu:focal sh -c 'apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -yqq build-essential >/dev/null && make -j4'
+      - run: docker run --rm --platform linux/386 -v "$PWD":/src -w /src i386/ubuntu:focal sh -c 'echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80retries && apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -yqq build-essential >/dev/null && make -j4'
 
   windows:
     strategy:
@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - run: sudo apt-get update -qq && sudo apt-get install -yqq g++-mingw-w64-x86-64-posix g++-mingw-w64-i686-posix gcc-mingw-w64-x86-64-posix gcc-mingw-w64-i686-posix >/dev/null
+      - run: echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80retries && sudo apt-get update -qq && sudo apt-get install -yqq g++-mingw-w64-x86-64-posix g++-mingw-w64-i686-posix gcc-mingw-w64-x86-64-posix gcc-mingw-w64-i686-posix >/dev/null
       - run: make -j4 platform=win CC=${{ matrix.arch }}-w64-mingw32-gcc-posix CXX=${{ matrix.arch }}-w64-mingw32-g++-posix
       - uses: actions/upload-artifact@v4
         with:
@@ -59,7 +59,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
-      - run: make -j4 platform=${{ matrix.platform }} CROSS_COMPILE=1 arch=${{ matrix.arch }}
+      - run: make -j4 platform=${{ matrix.platform }}
 
   emscripten:
     runs-on: ubuntu-22.04
