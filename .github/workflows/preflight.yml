@@ -24,9 +24,10 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - run: docker run --rm --platform linux/386 -v "$PWD":/src -w /src i386/ubuntu:focal sh -c 'apt-get -o Acquire::Retries=5 update -qq && DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -yqq build-essential >/dev/null && make -j4'
+      - run: docker run --rm --platform linux/386 -v "$PWD":/src -w /src i386/debian:bookworm sh -c 'apt-get -o Acquire::Retries=5 update -qq && DEBIAN_FRONTEND=noninteractive apt-get -o Acquire::Retries=5 install -yqq build-essential >/dev/null && make -j4'
 
   windows:
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -34,7 +35,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - run: echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80retries && sudo apt-get update -qq && sudo apt-get install -yqq g++-mingw-w64-x86-64-posix g++-mingw-w64-i686-posix gcc-mingw-w64-x86-64-posix gcc-mingw-w64-i686-posix >/dev/null
+      - run: echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80retries && sudo apt-get -o Acquire::Retries=5 update -qq && sudo apt-get -o Acquire::Retries=5 install -yqq g++-mingw-w64-x86-64-posix g++-mingw-w64-i686-posix gcc-mingw-w64-x86-64-posix gcc-mingw-w64-i686-posix >/dev/null
       - run: make -j4 platform=win CC=${{ matrix.arch }}-w64-mingw32-gcc-posix CXX=${{ matrix.arch }}-w64-mingw32-g++-posix
       - uses: actions/upload-artifact@v4
         with:
@@ -83,4 +84,4 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - run: docker run --rm -v "$PWD":/src -w /src ${{ matrix.image }} sh -c 'command -v make >/dev/null || (apk add --no-cache make >/dev/null 2>&1 || true); make -j4 platform=${{ matrix.platform }}'
+      - run: docker run --rm -v "$PWD":/src -w /src ${{ matrix.image }} sh -c 'command -v make >/dev/null || (apk add --no-cache make >/dev/null 2>&1 || true); make -k -j4 platform=${{ matrix.platform }}'
